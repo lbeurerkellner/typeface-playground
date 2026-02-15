@@ -1,117 +1,20 @@
-# Type Tool - Font Playground
+# Typeface Playground
 
-An interactive font experimentation playground built with Next.js and opentype.js. This tool allows you to visualize fonts in vector form and will support advanced typography experiments.
+An interactive font experimentation playground for procedural, animated typography
 
-## Features
-
-- 🎨 **Font Selector**: Choose from available fonts in the `fonts/` directory
-- ✍️ **Text Input**: Type any text to render
-- 🖼️ **Vector Rendering**: Real-time SVG rendering using opentype.js
-- 📺 **Fullscreen Mode**: Focus on your typography work
-- 🔄 **Hot Reload**: Automatically detects new fonts added to the `fonts/` directory
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+ installed
-- npm or yarn
-
-### Installation
-
-```bash
-npm install
-```
-
-### Running the Development Server
+## Quickstart
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+### Font Licensing
 
-### Adding Fonts
+**Important:** You are responsible for ensuring you have the proper licenses for any fonts you use with Typeface Playground.
 
-1. Place `.ttf` or `.otf` font files in the `fonts/` directory
-2. Organize them in subdirectories by font family (e.g., `fonts/Montserrat/`)
-3. The server will automatically detect and list them
+- Only use fonts that you own, have licensed, or that are available under open licenses (e.g., SIL Open Font License, Apache License)
+- Check the font's license terms before adding it to your project
+- Some popular sources for open-source fonts include [Google Fonts](https://fonts.google.com/), [Font Library](https://fontlibrary.org/), and [Open Font Library](https://openfontlibrary.org/)
+- Commercial fonts may require specific licensing for web use or distribution
 
-## Project Structure
-
-```
-type-tool/
-├── app/
-│   ├── api/
-│   │   └── fonts/          # API routes for font management
-│   │       ├── route.ts    # Lists all available fonts
-│   │       └── [...path]/  # Serves individual font files
-│   ├── components/
-│   │   └── FontRenderer.tsx # SVG renderer using opentype.js
-│   ├── page.tsx            # Main UI page
-│   ├── layout.tsx          # Root layout
-│   └── globals.css         # Global styles
-├── fonts/                  # Font files directory
-└── public/                 # Static assets
-```
-
-## API Endpoints
-
-### GET `/api/fonts`
-Returns a list of all available fonts with their paths and families.
-
-**Response:**
-```json
-{
-  "fonts": [
-    {
-      "name": "Montserrat-Regular.ttf",
-      "path": "Montserrat/static/Montserrat-Regular.ttf",
-      "family": "Montserrat"
-    }
-  ]
-}
-```
-
-### GET `/api/fonts/[...path]`
-Serves a font file from the `fonts/` directory.
-
-**Example:** `/api/fonts/Montserrat/static/Montserrat-Regular.ttf`
-
-## Technology Stack
-
-- **Next.js 15** - React framework with App Router
-- **TypeScript** - Type-safe development
-- **opentype.js** - Font parsing and rendering
-- **Tailwind CSS** - Styling
-- **SVG** - Vector graphics rendering
-
-## Roadmap
-
-Future features planned:
-- ⚖️ Weight slider for variable fonts
-- 🌊 Distortion effects along font curvature
-- 📏 Advanced typography controls (kerning, tracking, leading)
-- 🎨 Color and gradient fills
-- 💾 Export rendered text as SVG
-- 🔍 Glyph inspector
-- 📐 Grid and alignment guides
-
-## Development
-
-### Build for Production
-
-```bash
-npm run build
-npm start
-```
-
-### Linting
-
-```bash
-npm run lint
-```
-
-## License
-
-MIT
+This project only includes examples fonts that are licensed under the OFL.txt license.

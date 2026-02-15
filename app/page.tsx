@@ -1,7 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import FontRenderer from './components/FontRenderer';
+import EffectsSidebar from './components/EffectsSidebar';
+import type { Effect, EffectType } from './types/effects';
+import { createEffect } from './types/effects';
+import type { EffectAnimations, AnimationConfig } from './types/animation';
+import { useAnimationEngine } from './hooks/useAnimationEngine';
+import type { Preset } from './types/presets';
 
 interface FontFile {
   name: string;
@@ -20,13 +26,44 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [wireframeMode, setWireframeMode] = useState(false);
+  const [effects, setEffects] = useState<Effect[]>([]);
+  const [animations, setAnimations] = useState<EffectAnimations>({});
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [previewPreset, setPreviewPreset] = useState<Preset | null>(null);
   const fontRendererRef = useRef<FontRendererHandle>(null);
+
+  // Use preview preset if hovering, otherwise use actual effects
+  const displayEffects = previewPreset?.effects ?? effects;
+  const displayAnimations = previewPreset?.animations ?? animations;
+
+  // Handle animated parameter updates
+  const handleAnimatedParameterUpdate = useCallback((effectId: string, paramName: string, value: number) => {
+    setEffects(prevEffects => 
+      prevEffects.map(effect => {
+        if (effect.id !== effectId) return effect;
+        
+        return {
+          ...effect,
+          parameters: {
+            ...effect.parameters,
+            [paramName]: value,
+          } as typeof effect.parameters,
+        };
+      })
+    );
+  }, []);
+
+  // Initialize animation engine (use actual effects/animations, not preview)
+  useAnimationEngine(effects, animations, handleAnimatedParameterUpdate);
 
   // Load settings from localStorage on mount
   useEffect(() => {
     const savedFont = localStorage.getItem('selectedFont');
     const savedText = localStorage.getItem('text');
     const savedWireframe = localStorage.getItem('wireframeMode');
+    const savedEffects = localStorage.getItem('effects');
+    const savedAnimations = localStorage.getItem('animations');
+    const savedPresets = localStorage.getItem('presets');
     
     if (savedText) {
       setText(savedText);
@@ -34,6 +71,33 @@ export default function Home() {
     
     if (savedWireframe === 'true') {
       setWireframeMode(true);
+    }
+    
+    if (savedEffects) {
+      try {
+        const parsed = JSON.parse(savedEffects);
+        setEffects(parsed);
+      } catch (err) {
+        console.error('Failed to parse saved effects:', err);
+      }
+    }
+
+    if (savedAnimations) {
+      try {
+        const parsed = JSON.parse(savedAnimations);
+        setAnimations(parsed);
+      } catch (err) {
+        console.error('Failed to parse saved animations:', err);
+      }
+    }
+
+    if (savedPresets) {
+      try {
+        const parsed = JSON.parse(savedPresets);
+        setPresets(parsed);
+      } catch (err) {
+        console.error('Failed to parse saved presets:', err);
+      }
     }
     
     fetch('/api/fonts')
@@ -69,6 +133,18 @@ export default function Home() {
     localStorage.setItem('wireframeMode', wireframeMode.toString());
   }, [wireframeMode]);
 
+  useEffect(() => {
+    localStorage.setItem('effects', JSON.stringify(effects));
+  }, [effects]);
+
+  useEffect(() => {
+    localStorage.setItem('animations', JSON.stringify(animations));
+  }, [animations]);
+
+  useEffect(() => {
+    localStorage.setItem('presets', JSON.stringify(presets));
+  }, [presets]);
+
   // Group fonts by family
   const fontsByFamily = fonts.reduce((acc, font) => {
     if (!acc[font.family]) {
@@ -102,7 +178,7 @@ export default function Home() {
     // Create a temporary link and trigger download
     const link = document.createElement('a');
     link.href = url;
-    link.download = `type-tool-${Date.now()}.svg`;
+    link.download = `typeface-playground-${Date.now()}.svg`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -111,9 +187,86 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
+  // Effect handler functions
+  const addEffect = (type: EffectType) => {
+    const newEffect = createEffect(type);
+    setEffects([...effects, newEffect]);
+  };
+
+  const updateEffect = (id: string, parameters: Effect['parameters']) => {
+    setEffects(effects.map(effect => 
+      effect.id === id 
+        ? { ...effect, parameters: parameters as typeof effect.parameters }
+        : effect
+    ));
+  };
+
+  const toggleEffect = (id: string) => {
+    setEffects(effects.map(effect =>
+      effect.id === id
+        ? { ...effect, enabled: !effect.enabled }
+        : effect
+    ));
+  };
+
+  const deleteEffect = (id: string) => {
+    setEffects(effects.filter(effect => effect.id !== id));
+  };
+
+  const moveEffect = (id: string, direction: 'up' | 'down') => {
+    const index = effects.findIndex(e => e.id === id);
+    if (index === -1) return;
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= effects.length) return;
+
+    const newEffects = [...effects];
+    [newEffects[index], newEffects[newIndex]] = [newEffects[newIndex], newEffects[index]];
+    setEffects(newEffects);
+  };
+
+  const updateAnimation = (effectId: string, paramName: string, config: AnimationConfig) => {
+    setAnimations(prev => ({
+      ...prev,
+      [effectId]: {
+        ...prev[effectId],
+        [paramName]: config,
+      },
+    }));
+  };
+
+  // Preset handlers
+  const savePreset = (name: string) => {
+    const newPreset: Preset = {
+      id: crypto.randomUUID(),
+      name,
+      effects: JSON.parse(JSON.stringify(effects)), // Deep clone
+      animations: JSON.parse(JSON.stringify(animations)), // Deep clone
+      createdAt: Date.now(),
+    };
+    setPresets([...presets, newPreset]);
+  };
+
+  const loadPreset = (presetId: string) => {
+    const preset = presets.find(p => p.id === presetId);
+    if (!preset) return;
+    
+    // Deep clone to avoid reference issues
+    setEffects(JSON.parse(JSON.stringify(preset.effects)));
+    setAnimations(JSON.parse(JSON.stringify(preset.animations)));
+  };
+
+  const deletePreset = (presetId: string) => {
+    setPresets(presets.filter(p => p.id !== presetId));
+  };
+
+  const handlePreviewPreset = (preset: Preset | null) => {
+    setPreviewPreset(preset);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
           <p>Loading fonts...</p>
@@ -123,24 +276,24 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-black text-white">
       {/* Compact Controls Panel */}
-      <div className={`border-b border-gray-700 bg-gray-800 ${isFullscreen ? 'hidden' : ''}`}>
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center gap-4 flex-wrap">
+      <div className={`border-b border-zinc-800 bg-black ${isFullscreen ? 'hidden' : ''}`}>
+        <div className="max-w-7xl mx-auto px-4 py-2.5">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Title */}
-            <h1 className="text-xl font-bold mr-2">Type Tool</h1>
+            <h1 className="text-base font-light mr-2 text-zinc-400">Typeface Playground</h1>
 
             {/* Font Selector */}
             <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <label htmlFor="font-select" className="text-sm text-gray-300 whitespace-nowrap">
-                Font:
+              <label htmlFor="font-select" className="text-xs text-zinc-500 whitespace-nowrap">
+                Font
               </label>
               <select
                 id="font-select"
                 value={selectedFont || ''}
                 onChange={(e) => setSelectedFont(e.target.value)}
-                className="flex-1 px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="flex-1 px-2.5 py-1 text-xs bg-black border border-zinc-800 rounded focus:ring-1 focus:ring-zinc-600 focus:border-zinc-600 outline-none"
               >
                 {Object.entries(fontsByFamily).map(([family, familyFonts]) => (
                   <optgroup key={family} label={family}>
@@ -156,8 +309,8 @@ export default function Home() {
 
             {/* Text Input */}
             <div className="flex items-center gap-2 flex-1 min-w-[250px]">
-              <label htmlFor="text-input" className="text-sm text-gray-300 whitespace-nowrap">
-                Text:
+              <label htmlFor="text-input" className="text-xs text-zinc-500 whitespace-nowrap">
+                Text
               </label>
               <textarea
                 id="text-input"
@@ -165,8 +318,8 @@ export default function Home() {
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Enter text..."
                 rows={1}
-                className="flex-1 px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
-                style={{ minHeight: '32px' }}
+                className="flex-1 px-2.5 py-1 text-xs bg-black border border-zinc-800 rounded focus:ring-1 focus:ring-zinc-600 focus:border-zinc-600 outline-none resize-none"
+                style={{ minHeight: '26px' }}
               />
             </div>
 
@@ -174,27 +327,27 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleWireframe}
-                className={`px-3 py-1.5 text-sm rounded transition-colors whitespace-nowrap ${
+                className={`px-2.5 py-1 text-xs rounded transition-colors whitespace-nowrap ${
                   wireframeMode
-                    ? 'bg-purple-600 hover:bg-purple-700'
-                    : 'bg-gray-700 hover:bg-gray-600'
+                    ? 'bg-white text-black hover:bg-zinc-200'
+                    : 'border border-zinc-800 hover:border-zinc-600'
                 }`}
                 title="Toggle wireframe mode"
               >
-                {wireframeMode ? '● Wireframe' : '○ Wireframe'}
+                {wireframeMode ? '●' : '○'}
               </button>
               <button
                 onClick={downloadSVG}
-                className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 rounded transition-colors whitespace-nowrap"
+                className="px-2.5 py-1 text-xs border border-zinc-800 hover:border-zinc-600 rounded transition-colors whitespace-nowrap"
                 title="Download as SVG"
               >
-                Save SVG
+                Save
               </button>
               <button
                 onClick={toggleFullscreen}
-                className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors whitespace-nowrap"
+                className="px-2.5 py-1 text-xs border border-zinc-800 hover:border-zinc-600 rounded transition-colors whitespace-nowrap"
               >
-                Fullscreen
+                Full
               </button>
             </div>
           </div>
@@ -206,21 +359,44 @@ export default function Home() {
         <div className="absolute top-4 right-4 z-10">
           <button
             onClick={toggleFullscreen}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors shadow-lg"
+            className="px-3 py-1.5 text-xs border border-zinc-800 hover:border-zinc-600 rounded transition-colors"
           >
-            Exit Fullscreen
+            Exit
           </button>
         </div>
       )}
 
-      {/* Render Area */}
-      <div className={`${isFullscreen ? 'h-screen' : 'h-[calc(100vh-64px)]'}`}>
-        <FontRenderer 
-          ref={fontRendererRef} 
-          fontPath={selectedFont} 
-          text={text}
-          wireframeMode={wireframeMode}
-        />
+      {/* Main Content Area with Sidebar */}
+      <div className={`flex ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-48px)]'}`}>
+        {/* Render Area */}
+        <div className="flex-1">
+          <FontRenderer 
+            ref={fontRendererRef} 
+            fontPath={selectedFont} 
+            text={text}
+            wireframeMode={wireframeMode}
+            effects={displayEffects}
+          />
+        </div>
+
+        {/* Effects Sidebar (hidden in fullscreen) */}
+        {!isFullscreen && (
+          <EffectsSidebar
+            effects={effects}
+            animations={animations}
+            presets={presets}
+            onAddEffect={addEffect}
+            onUpdateEffect={updateEffect}
+            onToggleEffect={toggleEffect}
+            onDeleteEffect={deleteEffect}
+            onMoveEffect={moveEffect}
+            onUpdateAnimation={updateAnimation}
+            onSavePreset={savePreset}
+            onLoadPreset={loadPreset}
+            onDeletePreset={deletePreset}
+            onPreviewPreset={handlePreviewPreset}
+          />
+        )}
       </div>
     </div>
   );
