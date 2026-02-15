@@ -1,36 +1,30 @@
-Montserrat Variable Font
-========================
+Host Grotesk Variable Font
+==========================
 
-This download contains Montserrat as both variable fonts and static fonts.
+This download contains Host Grotesk as both variable fonts and static fonts.
 
-Montserrat is a variable font with this axis:
+Host Grotesk is a variable font with this axis:
   wght
 
 This means all the styles are contained in these files:
-  Montserrat/Montserrat-VariableFont_wght.ttf
-  Montserrat/Montserrat-Italic-VariableFont_wght.ttf
+  Host_Grotesk/HostGrotesk-VariableFont_wght.ttf
+  Host_Grotesk/HostGrotesk-Italic-VariableFont_wght.ttf
 
 If your app fully supports variable fonts, you can now pick intermediate styles
 that aren’t available as static fonts. Not all apps support variable fonts, and
-in those cases you can use the static font files for Montserrat:
-  Montserrat/static/Montserrat-Thin.ttf
-  Montserrat/static/Montserrat-ExtraLight.ttf
-  Montserrat/static/Montserrat-Light.ttf
-  Montserrat/static/Montserrat-Regular.ttf
-  Montserrat/static/Montserrat-Medium.ttf
-  Montserrat/static/Montserrat-SemiBold.ttf
-  Montserrat/static/Montserrat-Bold.ttf
-  Montserrat/static/Montserrat-ExtraBold.ttf
-  Montserrat/static/Montserrat-Black.ttf
-  Montserrat/static/Montserrat-ThinItalic.ttf
-  Montserrat/static/Montserrat-ExtraLightItalic.ttf
-  Montserrat/static/Montserrat-LightItalic.ttf
-  Montserrat/static/Montserrat-Italic.ttf
-  Montserrat/static/Montserrat-MediumItalic.ttf
-  Montserrat/static/Montserrat-SemiBoldItalic.ttf
-  Montserrat/static/Montserrat-BoldItalic.ttf
-  Montserrat/static/Montserrat-ExtraBoldItalic.ttf
-  Montserrat/static/Montserrat-BlackItalic.ttf
+in those cases you can use the static font files for Host Grotesk:
+  Host_Grotesk/static/HostGrotesk-Light.ttf
+  Host_Grotesk/static/HostGrotesk-Regular.ttf
+  Host_Grotesk/static/HostGrotesk-Medium.ttf
+  Host_Grotesk/static/HostGrotesk-SemiBold.ttf
+  Host_Grotesk/static/HostGrotesk-Bold.ttf
+  Host_Grotesk/static/HostGrotesk-ExtraBold.ttf
+  Host_Grotesk/static/HostGrotesk-LightItalic.ttf
+  Host_Grotesk/static/HostGrotesk-Italic.ttf
+  Host_Grotesk/static/HostGrotesk-MediumItalic.ttf
+  Host_Grotesk/static/HostGrotesk-SemiBoldItalic.ttf
+  Host_Grotesk/static/HostGrotesk-BoldItalic.ttf
+  Host_Grotesk/static/HostGrotesk-ExtraBoldItalic.ttf
 
 Get started
 -----------

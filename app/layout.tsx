@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Type Tool - Font Playground",
+  title: "Typeface Playground",
   description: "Interactive font experimentation playground",
 };
 

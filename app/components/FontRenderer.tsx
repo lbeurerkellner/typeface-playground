@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import opentype from 'opentype.js';
+import type { Effect } from '../types/effects';
+import { applyEffects } from '../utils/effectProcessors';
 
 interface FontRendererProps {
   fontPath: string | null;
   text: string;
   wireframeMode?: boolean;
+  effects?: Effect[];
 }
 
 export interface FontRendererHandle {
@@ -14,11 +17,24 @@ export interface FontRendererHandle {
 }
 
 const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
-  function FontRenderer({ fontPath, text, wireframeMode = false }, ref) {
+  function FontRenderer({ fontPath, text, wireframeMode = false, effects = [] }, ref) {
     const [font, setFont] = useState<opentype.Font | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    
+    // Pan and Zoom state
+    const [zoom, setZoom] = useState(1);
+    const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [isPanning, setIsPanning] = useState(false);
+    const [startPan, setStartPan] = useState({ x: 0, y: 0 });
+
+    // Refs to track latest values (avoids stale closures in event handlers)
+    const zoomRef = useRef(zoom);
+    const panRef = useRef(pan);
+    zoomRef.current = zoom;
+    panRef.current = pan;
 
     // Expose method to get SVG content
     useImperativeHandle(ref, () => ({
@@ -102,38 +118,92 @@ const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
         let maxX = -Infinity;
         let maxY = -Infinity;
 
-        // Render each line
-        lines.forEach((line, index) => {
+        // Render each line with per-character paths
+        lines.forEach((line, lineIndex) => {
           if (!line) return; // Skip empty lines
           
-          const y = startY + (index * lineHeight);
-          const path = font.getPath(line, startX, y, fontSize);
-          const bbox = path.getBoundingBox();
-
-          // Update overall bounding box
-          minX = Math.min(minX, bbox.x1);
-          minY = Math.min(minY, bbox.y1);
-          maxX = Math.max(maxX, bbox.x2);
-          maxY = Math.max(maxY, bbox.y2);
-
-          // Create path element for this line
-          const pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          pathElement.setAttribute('d', path.toPathData(2));
+          const lineY = startY + (lineIndex * lineHeight);
           
-          if (wireframeMode) {
-            // Wireframe mode: stroke only, no fill
-            pathElement.setAttribute('fill', 'none');
-            pathElement.setAttribute('stroke', 'currentColor');
-            pathElement.setAttribute('stroke-width', '2');
-          } else {
-            // Normal mode: filled
-            pathElement.setAttribute('fill', 'currentColor');
+          // Create a group for this line
+          const lineGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          lineGroup.setAttribute('data-line', lineIndex.toString());
+          
+          // Track current x position for character placement
+          let currentX = startX;
+          
+          // Render each character individually
+          for (let charIndex = 0; charIndex < line.length; charIndex++) {
+            const char = line[charIndex];
+            
+            // Get the glyph for this character
+            const glyph = font.charToGlyph(char);
+            
+            // Create a group for this character
+            const charGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            charGroup.setAttribute('data-char', char);
+            charGroup.setAttribute('data-char-index', charIndex.toString());
+            
+            // Get the path for this glyph
+            const glyphPath = glyph.getPath(currentX, lineY, fontSize);
+            const pathData = glyphPath.toPathData(2);
+            
+            // Only create a path element if the glyph has actual geometry
+            if (pathData) {
+              const pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              pathElement.setAttribute('d', pathData);
+              
+              if (wireframeMode) {
+                // Wireframe mode: stroke only, no fill
+                pathElement.setAttribute('fill', 'none');
+                pathElement.setAttribute('stroke', 'currentColor');
+                pathElement.setAttribute('stroke-width', '2');
+              } else {
+                // Normal mode: filled
+                pathElement.setAttribute('fill', 'currentColor');
+              }
+              
+              charGroup.appendChild(pathElement);
+              
+              // Update bounding box
+              const bbox = glyphPath.getBoundingBox();
+              minX = Math.min(minX, bbox.x1);
+              minY = Math.min(minY, bbox.y1);
+              maxX = Math.max(maxX, bbox.x2);
+              maxY = Math.max(maxY, bbox.y2);
+            }
+            
+            lineGroup.appendChild(charGroup);
+            
+            // Advance x position by the glyph's advance width
+            const scale = fontSize / font.unitsPerEm;
+            currentX += glyph.advanceWidth * scale;
           }
           
-          group.appendChild(pathElement);
+          group.appendChild(lineGroup);
         });
 
         svgRef.current.appendChild(group);
+
+        // Apply effects if any are enabled
+        if (effects.length > 0) {
+          applyEffects(svgRef.current, effects);
+        }
+
+        // Recalculate bounding box after effects (effects may change dimensions)
+        // Get all path elements to calculate new bounds
+        const allPaths = svgRef.current.querySelectorAll('path[d]');
+        allPaths.forEach((pathElement) => {
+          const path = pathElement as SVGPathElement;
+          try {
+            const bbox = path.getBBox();
+            minX = Math.min(minX, bbox.x);
+            minY = Math.min(minY, bbox.y);
+            maxX = Math.max(maxX, bbox.x + bbox.width);
+            maxY = Math.max(maxY, bbox.y + bbox.height);
+          } catch (e) {
+            // getBBox can fail on some paths, ignore
+          }
+        });
 
         // Handle case where all lines are empty
         if (!isFinite(minX)) {
@@ -143,14 +213,20 @@ const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
           maxY = 400;
         }
 
-        // Calculate dimensions with padding
-        const padding = 50;
-        const width = Math.max(maxX - minX + padding * 2, 800);
-        const height = Math.max(maxY - minY + padding * 2, 400);
-
-        // Adjust viewBox to center the text
-        const viewBoxX = minX - padding;
-        const viewBoxY = minY - padding;
+        // Calculate content dimensions
+        const contentWidth = maxX - minX;
+        const contentHeight = maxY - minY;
+        
+        // Expand viewBox to 5x the content size to accommodate effects like multiply
+        const expansionFactor = 5;
+        const width = Math.max(contentWidth * expansionFactor, 800);
+        const height = Math.max(contentHeight * expansionFactor, 400);
+        
+        // Center the viewBox on the content
+        const contentCenterX = (minX + maxX) / 2;
+        const contentCenterY = (minY + maxY) / 2;
+        const viewBoxX = contentCenterX - width / 2;
+        const viewBoxY = contentCenterY - height / 2;
         
         svgRef.current.setAttribute('viewBox', `${viewBoxX} ${viewBoxY} ${width} ${height}`);
         svgRef.current.setAttribute('width', '100%');
@@ -158,7 +234,134 @@ const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
       } catch (err) {
         setError(`Rendering error: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
-    }, [font, text, wireframeMode]);
+    }, [font, text, wireframeMode, effects]);
+
+    // Handle mouse wheel for zoom (with mouse position anchor)
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const handleWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        
+        // Get mouse position relative to container
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        // Read latest values from refs (avoids stale closure)
+        const prevZoom = zoomRef.current;
+        const prevPan = panRef.current;
+        const newZoom = Math.max(0.1, Math.min(10, prevZoom * delta));
+        
+        // Calculate the point in transform-space under the mouse
+        const worldX = (mouseX - prevPan.x) / prevZoom;
+        const worldY = (mouseY - prevPan.y) / prevZoom;
+        
+        // Adjust pan so the same point stays under the mouse
+        const newPan = {
+          x: mouseX - worldX * newZoom,
+          y: mouseY - worldY * newZoom,
+        };
+        
+        zoomRef.current = newZoom;
+        panRef.current = newPan;
+        setZoom(newZoom);
+        setPan(newPan);
+      };
+
+      container.addEventListener('wheel', handleWheel, { passive: false });
+      return () => container.removeEventListener('wheel', handleWheel);
+    }, []);
+
+    // Handle mouse drag for pan
+    const handleMouseDown = (e: React.MouseEvent) => {
+      if (e.button !== 0) return; // Only left mouse button
+      setIsPanning(true);
+      setStartPan({ x: e.clientX - panRef.current.x, y: e.clientY - panRef.current.y });
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+      if (!isPanning) return;
+      const newPan = {
+        x: e.clientX - startPan.x,
+        y: e.clientY - startPan.y,
+      };
+      panRef.current = newPan;
+      setPan(newPan);
+    };
+
+    const handleMouseUp = () => {
+      setIsPanning(false);
+    };
+
+    // Handle keyboard shortcuts
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        if (e.key === '0' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          const newPan = { x: 0, y: 0 };
+          zoomRef.current = 1;
+          panRef.current = newPan;
+          setZoom(1);
+          setPan(newPan);
+        } else if (e.key === '=' || e.key === '+') {
+          e.preventDefault();
+          
+          // Zoom towards center of viewport
+          const rect = container.getBoundingClientRect();
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          
+          const prevZoom = zoomRef.current;
+          const prevPan = panRef.current;
+          const newZoom = Math.min(10, prevZoom * 1.2);
+          const worldX = (centerX - prevPan.x) / prevZoom;
+          const worldY = (centerY - prevPan.y) / prevZoom;
+          
+          const newPan = {
+            x: centerX - worldX * newZoom,
+            y: centerY - worldY * newZoom,
+          };
+          
+          zoomRef.current = newZoom;
+          panRef.current = newPan;
+          setZoom(newZoom);
+          setPan(newPan);
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          
+          // Zoom out from center of viewport
+          const rect = container.getBoundingClientRect();
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          
+          const prevZoom = zoomRef.current;
+          const prevPan = panRef.current;
+          const newZoom = Math.max(0.1, prevZoom * 0.8);
+          const worldX = (centerX - prevPan.x) / prevZoom;
+          const worldY = (centerY - prevPan.y) / prevZoom;
+          
+          const newPan = {
+            x: centerX - worldX * newZoom,
+            y: centerY - worldY * newZoom,
+          };
+          
+          zoomRef.current = newZoom;
+          panRef.current = newPan;
+          setZoom(newZoom);
+          setPan(newPan);
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     if (loading) {
       return (
@@ -198,12 +401,45 @@ const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
     }
 
     return (
-      <div className="w-full h-full flex items-center justify-center p-8">
-        <svg
-          ref={svgRef}
-          className="max-w-full max-h-full text-white"
-          style={{ filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))' }}
-        />
+      <div 
+        ref={containerRef}
+        className="w-full h-full relative overflow-hidden"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+      >
+        {/* Zoom indicator */}
+        <div className="absolute top-4 left-4 z-10 text-xs text-zinc-600 pointer-events-none">
+          {Math.round(zoom * 100)}%
+        </div>
+        
+        {/* Reset hint */}
+        {(zoom !== 1 || pan.x !== 0 || pan.y !== 0) && (
+          <div className="absolute bottom-4 left-4 z-10 text-xs text-zinc-600 pointer-events-none">
+            Press Cmd+0 to reset
+          </div>
+        )}
+        
+        <div 
+          className="w-full h-full flex items-center justify-center"
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: '0 0',
+            transition: isPanning ? 'none' : 'transform 0.1s ease-out',
+          }}
+        >
+          <svg
+            ref={svgRef}
+            className="text-white"
+            style={{ 
+              filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+            }}
+          />
+        </div>
       </div>
     );
   }
