@@ -1,0 +1,4 @@
+- export as GIF
+- transform effect (wobble, rotate, scale, etc.)
+- letter spacing effects
+- share configuration as URL
