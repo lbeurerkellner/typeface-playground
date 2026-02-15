@@ -369,7 +369,7 @@ export default function Home() {
       {/* Main Content Area with Sidebar */}
       <div className={`flex ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-48px)]'}`}>
         {/* Render Area */}
-        <div className="flex-1">
+        <div className="flex-1 relative">
           <FontRenderer 
             ref={fontRendererRef} 
             fontPath={selectedFont} 
@@ -377,6 +377,21 @@ export default function Home() {
             wireframeMode={wireframeMode}
             effects={displayEffects}
           />
+          
+          {/* Font License Notice */}
+          {!isFullscreen && (
+            <div className="absolute bottom-4 right-4 text-[10px] text-zinc-700 max-w-[200px] text-right">
+              Included fonts are licensed under{' '}
+              <a 
+                href="https://scripts.sil.org/OFL" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="underline hover:text-zinc-500"
+              >
+                OFL
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Effects Sidebar (hidden in fullscreen) */}
