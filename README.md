@@ -1,5 +1,7 @@
 # Typeface Playground
 
+[Demo](https://typeface-playground.vercel.app/)
+
 An interactive font experimentation playground for procedural, animated typography.
 
 <img width="1918" height="961" alt="image" src="https://github.com/user-attachments/assets/c25bc60d-bada-495c-8f97-767f21d9e12c" />
