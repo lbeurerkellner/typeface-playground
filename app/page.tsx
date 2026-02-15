@@ -47,8 +47,8 @@ export default function Home() {
           parameters: {
             ...effect.parameters,
             [paramName]: value,
-          } as typeof effect.parameters,
-        };
+          },
+        } as Effect;
       })
     );
   }, []);
@@ -196,7 +196,7 @@ export default function Home() {
   const updateEffect = (id: string, parameters: Effect['parameters']) => {
     setEffects(effects.map(effect => 
       effect.id === id 
-        ? { ...effect, parameters: parameters as typeof effect.parameters }
+        ? { ...effect, parameters } as Effect
         : effect
     ));
   };

@@ -18,3 +18,7 @@ npm run dev
 - Commercial fonts may require specific licensing for web use or distribution
 
 This project only includes examples fonts that are licensed under the OFL.txt license.
+
+## Built With
+
+This project is only made possible by the efforts of the _[opentype.js](https://opentype.js.org/)_ library.

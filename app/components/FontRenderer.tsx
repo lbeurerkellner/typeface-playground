@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import opentype from 'opentype.js';
+import type { Font } from 'opentype.js';
 import type { Effect } from '../types/effects';
 import { applyEffects } from '../utils/effectProcessors';
 
@@ -18,7 +19,7 @@ export interface FontRendererHandle {
 
 const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
   function FontRenderer({ fontPath, text, wireframeMode = false, effects = [] }, ref) {
-    const [font, setFont] = useState<opentype.Font | null>(null);
+    const [font, setFont] = useState<Font | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
