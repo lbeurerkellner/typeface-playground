@@ -13,6 +13,8 @@ export interface GifExportSettings {
 
 interface GifExportDialogProps {
   defaultDuration: number;
+  defaultWidth?: number;
+  defaultHeight?: number;
   isExporting: boolean;
   progress: number;
   onExport: (settings: GifExportSettings) => void;
@@ -21,13 +23,15 @@ interface GifExportDialogProps {
 
 export default function GifExportDialog({
   defaultDuration,
+  defaultWidth = 800,
+  defaultHeight = 600,
   isExporting,
   progress,
   onExport,
   onCancel,
 }: GifExportDialogProps) {
-  const [width, setWidth] = useState(800);
-  const [height, setHeight] = useState(600);
+  const [width, setWidth] = useState(defaultWidth);
+  const [height, setHeight] = useState(defaultHeight);
   const [fps, setFps] = useState(20);
   const [duration, setDuration] = useState(Math.round(defaultDuration * 10) / 10);
   const [foregroundColor, setForegroundColor] = useState('#ffffff');

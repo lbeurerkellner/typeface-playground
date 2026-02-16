@@ -510,6 +510,8 @@ export default function Home() {
       {showGifDialog && (
         <GifExportDialog
           defaultDuration={getDefaultDuration(animations)}
+          defaultWidth={fontRendererRef.current?.getContainerSize()?.width}
+          defaultHeight={fontRendererRef.current?.getContainerSize()?.height}
           isExporting={gifExporting}
           progress={gifProgress}
           onExport={handleGifExport}

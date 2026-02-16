@@ -141,6 +141,26 @@ export async function exportGif(
   container.appendChild(offscreenSvg);
   document.body.appendChild(container);
 
+  // If a visible viewBox was captured, adjust its aspect ratio to match the
+  // GIF output dimensions so the exported image isn't letterboxed or stretched.
+  let adjustedViewBox: ViewBox | undefined;
+  if (visibleViewBox) {
+    const outputAR = width / height;
+    const vbAR = visibleViewBox.width / visibleViewBox.height;
+    const cx = visibleViewBox.x + visibleViewBox.width / 2;
+    const cy = visibleViewBox.y + visibleViewBox.height / 2;
+
+    if (outputAR > vbAR) {
+      // Output is wider — expand viewBox width
+      const newW = visibleViewBox.height * outputAR;
+      adjustedViewBox = { x: cx - newW / 2, y: visibleViewBox.y, width: newW, height: visibleViewBox.height };
+    } else {
+      // Output is taller — expand viewBox height
+      const newH = visibleViewBox.width / outputAR;
+      adjustedViewBox = { x: visibleViewBox.x, y: cy - newH / 2, width: visibleViewBox.width, height: newH };
+    }
+  }
+
   const gif = GIFEncoder();
 
   try {
@@ -153,11 +173,11 @@ export async function exportGif(
       // Render SVG frame
       renderSVGFrame(offscreenSvg, font, text, wireframeMode, frameEffects);
 
-      // Override viewBox to match the visible viewport area if provided
-      if (visibleViewBox) {
+      // Override viewBox to match the visible viewport area
+      if (adjustedViewBox) {
         offscreenSvg.setAttribute(
           'viewBox',
-          `${visibleViewBox.x} ${visibleViewBox.y} ${visibleViewBox.width} ${visibleViewBox.height}`,
+          `${adjustedViewBox.x} ${adjustedViewBox.y} ${adjustedViewBox.width} ${adjustedViewBox.height}`,
         );
       }
 

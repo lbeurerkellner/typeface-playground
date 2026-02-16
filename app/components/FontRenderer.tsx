@@ -24,6 +24,7 @@ export interface FontRendererHandle {
   getSVGContent: () => string | null;
   getFont: () => Font | null;
   getVisibleViewBox: () => ViewBox | null;
+  getContainerSize: () => { width: number; height: number } | null;
 }
 
 const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
@@ -80,6 +81,11 @@ const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
           width: svgBottomRight.x - svgTopLeft.x,
           height: svgBottomRight.y - svgTopLeft.y,
         };
+      },
+      getContainerSize: () => {
+        if (!containerRef.current) return null;
+        const rect = containerRef.current.getBoundingClientRect();
+        return { width: Math.round(rect.width), height: Math.round(rect.height) };
       },
     }));
 
