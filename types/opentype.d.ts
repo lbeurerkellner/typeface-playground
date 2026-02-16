@@ -7,6 +7,7 @@ declare module 'opentype.js' {
     advanceWidth: number;
     leftSideBearing: number;
     path: Path;
+    getPath(x?: number, y?: number, fontSize?: number, options?: any, font?: Font): Path;
     getBoundingBox(): BoundingBox;
     getPath(x: number, y: number, fontSize: number, options?: any): Path;
   }

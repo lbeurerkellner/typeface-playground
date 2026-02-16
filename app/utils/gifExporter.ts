@@ -112,6 +112,13 @@ function svgToCanvas(
  * Creates a hidden offscreen SVG element for rendering frames,
  * then uses gifenc to encode all frames into a GIF blob.
  */
+export interface ViewBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export async function exportGif(
   font: Font,
   text: string,
@@ -120,6 +127,7 @@ export async function exportGif(
   animations: EffectAnimations,
   options: GifExportOptions,
   onProgress: (progress: number) => void,
+  visibleViewBox?: ViewBox,
 ): Promise<Blob> {
   const { width, height, fps, duration, foregroundColor, backgroundColor } = options;
   const totalFrames = Math.max(1, Math.round(fps * duration));
@@ -144,6 +152,14 @@ export async function exportGif(
 
       // Render SVG frame
       renderSVGFrame(offscreenSvg, font, text, wireframeMode, frameEffects);
+
+      // Override viewBox to match the visible viewport area if provided
+      if (visibleViewBox) {
+        offscreenSvg.setAttribute(
+          'viewBox',
+          `${visibleViewBox.x} ${visibleViewBox.y} ${visibleViewBox.width} ${visibleViewBox.height}`,
+        );
+      }
 
       // Set explicit pixel dimensions for rasterization
       offscreenSvg.setAttribute('width', String(width));
