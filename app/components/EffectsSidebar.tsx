@@ -131,7 +131,7 @@ export default function EffectsSidebar({
           <div className="text-center text-zinc-600 text-xs py-8">
             No effects added yet.
             <br />
-            Click "Add Effect" to begin.
+            Click &quot;Add Effect&quot; to begin.
           </div>
         ) : (
           effects.map((effect, index) => (
