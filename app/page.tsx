@@ -40,17 +40,17 @@ export default function Home() {
 
   // Handle animated parameter updates
   const handleAnimatedParameterUpdate = useCallback((effectId: string, paramName: string, value: number) => {
-    setEffects(prevEffects => 
+    setEffects(prevEffects =>
       prevEffects.map(effect => {
         if (effect.id !== effectId) return effect;
-        
+
         return {
           ...effect,
           parameters: {
             ...effect.parameters,
             [paramName]: value,
-          } as typeof effect.parameters,
-        };
+          },
+        } as Effect;
       })
     );
   }, []);
@@ -196,9 +196,9 @@ export default function Home() {
   };
 
   const updateEffect = (id: string, parameters: Effect['parameters']) => {
-    setEffects(effects.map(effect => 
-      effect.id === id 
-        ? { ...effect, parameters: parameters as typeof effect.parameters }
+    setEffects(effects.map(effect =>
+      effect.id === id
+        ? { ...effect, parameters } as Effect
         : effect
     ));
   };
