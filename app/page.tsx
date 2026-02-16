@@ -268,7 +268,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-dvh bg-black flex items-center justify-center">
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
           <p>Loading fonts...</p>
@@ -278,7 +278,7 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen bg-black text-white flex flex-col">
+    <div className="h-dvh bg-black text-white flex flex-col">
       {/* Compact Controls Panel */}
       <div className={`border-b border-zinc-800 bg-black shrink-0 ${isFullscreen ? 'hidden' : ''}`}>
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5">
