@@ -281,6 +281,9 @@ export default function Home() {
     setGifProgress(0);
 
     try {
+      // Capture the visible viewport area before export starts
+      const visibleViewBox = fontRendererRef.current?.getVisibleViewBox() ?? undefined;
+
       const blob = await exportGif(
         font,
         text,
@@ -289,6 +292,7 @@ export default function Home() {
         animations,
         settings,
         setGifProgress,
+        visibleViewBox,
       );
 
       // Trigger download

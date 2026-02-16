@@ -13,9 +13,17 @@ interface FontRendererProps {
   effects?: Effect[];
 }
 
+export interface ViewBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface FontRendererHandle {
   getSVGContent: () => string | null;
   getFont: () => Font | null;
+  getVisibleViewBox: () => ViewBox | null;
 }
 
 const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
@@ -45,6 +53,34 @@ const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
         return serializeSVG(svgRef.current, '#000000');
       },
       getFont: () => font,
+      getVisibleViewBox: () => {
+        if (!svgRef.current || !containerRef.current) return null;
+        const svg = svgRef.current;
+        const container = containerRef.current;
+
+        const ctm = svg.getScreenCTM();
+        if (!ctm) return null;
+        const inv = ctm.inverse();
+
+        const containerRect = container.getBoundingClientRect();
+
+        const topLeft = svg.createSVGPoint();
+        topLeft.x = containerRect.left;
+        topLeft.y = containerRect.top;
+        const svgTopLeft = topLeft.matrixTransform(inv);
+
+        const bottomRight = svg.createSVGPoint();
+        bottomRight.x = containerRect.right;
+        bottomRight.y = containerRect.bottom;
+        const svgBottomRight = bottomRight.matrixTransform(inv);
+
+        return {
+          x: svgTopLeft.x,
+          y: svgTopLeft.y,
+          width: svgBottomRight.x - svgTopLeft.x,
+          height: svgBottomRight.y - svgTopLeft.y,
+        };
+      },
     }));
 
     useEffect(() => {
