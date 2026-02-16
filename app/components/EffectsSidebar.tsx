@@ -21,6 +21,7 @@ interface EffectsSidebarProps {
   onLoadPreset: (presetId: string) => void;
   onDeletePreset: (presetId: string) => void;
   onPreviewPreset: (preset: Preset | null) => void;
+  isMobile?: boolean;
 }
 
 export default function EffectsSidebar({
@@ -37,6 +38,7 @@ export default function EffectsSidebar({
   onLoadPreset,
   onDeletePreset,
   onPreviewPreset,
+  isMobile = false,
 }: EffectsSidebarProps) {
   const [showAddMenu, setShowAddMenu] = useState(false);
 
@@ -46,11 +48,13 @@ export default function EffectsSidebar({
   };
 
   return (
-    <div className="w-[280px] h-full bg-black border-l border-zinc-800 flex flex-col">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-zinc-800">
-        <h2 className="text-sm font-medium text-zinc-300">Effects</h2>
-      </div>
+    <div className={`${isMobile ? 'w-full' : 'w-[280px]'} h-full bg-black ${isMobile ? '' : 'border-l border-zinc-800'} flex flex-col`}>
+      {/* Header - hidden on mobile since the drawer has its own header */}
+      {!isMobile && (
+        <div className="px-4 py-3 border-b border-zinc-800">
+          <h2 className="text-sm font-medium text-zinc-300">Effects</h2>
+        </div>
+      )}
 
       {/* Preset Manager */}
       <PresetManager

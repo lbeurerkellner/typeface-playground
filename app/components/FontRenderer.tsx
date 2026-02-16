@@ -297,6 +297,93 @@ const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
       setIsPanning(false);
     };
 
+    // Touch event handlers for mobile pan and pinch-to-zoom
+    const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+    const lastPinchDistRef = useRef<number | null>(null);
+
+    const getTouchDistance = (touches: React.TouchList) => {
+      if (touches.length < 2) return 0;
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const getTouchCenter = (touches: React.TouchList) => {
+      if (touches.length < 2) {
+        return { x: touches[0].clientX, y: touches[0].clientY };
+      }
+      return {
+        x: (touches[0].clientX + touches[1].clientX) / 2,
+        y: (touches[0].clientY + touches[1].clientY) / 2,
+      };
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+      if (e.touches.length === 1) {
+        // Single finger: start pan
+        lastTouchRef.current = {
+          x: e.touches[0].clientX - panRef.current.x,
+          y: e.touches[0].clientY - panRef.current.y,
+        };
+        lastPinchDistRef.current = null;
+        setIsPanning(true);
+      } else if (e.touches.length === 2) {
+        // Two fingers: start pinch-to-zoom
+        lastPinchDistRef.current = getTouchDistance(e.touches);
+        lastTouchRef.current = null;
+      }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+      e.preventDefault();
+
+      if (e.touches.length === 1 && lastTouchRef.current) {
+        // Single finger: pan
+        const newPan = {
+          x: e.touches[0].clientX - lastTouchRef.current.x,
+          y: e.touches[0].clientY - lastTouchRef.current.y,
+        };
+        panRef.current = newPan;
+        setPan(newPan);
+      } else if (e.touches.length === 2 && lastPinchDistRef.current !== null) {
+        // Two fingers: pinch-to-zoom
+        const currentDist = getTouchDistance(e.touches);
+        const delta = currentDist / lastPinchDistRef.current;
+        lastPinchDistRef.current = currentDist;
+
+        const container = containerRef.current;
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
+        const center = getTouchCenter(e.touches);
+        const centerX = center.x - rect.left;
+        const centerY = center.y - rect.top;
+
+        const prevZoom = zoomRef.current;
+        const prevPan = panRef.current;
+        const newZoom = Math.max(0.1, Math.min(10, prevZoom * delta));
+
+        const worldX = (centerX - prevPan.x) / prevZoom;
+        const worldY = (centerY - prevPan.y) / prevZoom;
+
+        const newPan = {
+          x: centerX - worldX * newZoom,
+          y: centerY - worldY * newZoom,
+        };
+
+        zoomRef.current = newZoom;
+        panRef.current = newPan;
+        setZoom(newZoom);
+        setPan(newPan);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      lastTouchRef.current = null;
+      lastPinchDistRef.current = null;
+      setIsPanning(false);
+    };
+
     // Handle keyboard shortcuts
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -401,13 +488,17 @@ const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
     }
 
     return (
-      <div 
+      <div
         ref={containerRef}
-        className="w-full h-full relative overflow-hidden"
+        className="w-full h-full relative overflow-hidden touch-none"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
       >
         {/* Zoom indicator */}

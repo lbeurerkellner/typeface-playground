@@ -8,6 +8,7 @@ import { createEffect } from './types/effects';
 import type { EffectAnimations, AnimationConfig } from './types/animation';
 import { useAnimationEngine } from './hooks/useAnimationEngine';
 import type { Preset } from './types/presets';
+import { BsChevronDown, BsChevronUp } from 'react-icons/bs';
 
 interface FontFile {
   name: string;
@@ -30,6 +31,7 @@ export default function Home() {
   const [animations, setAnimations] = useState<EffectAnimations>({});
   const [presets, setPresets] = useState<Preset[]>([]);
   const [previewPreset, setPreviewPreset] = useState<Preset | null>(null);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const fontRendererRef = useRef<FontRendererHandle>(null);
 
   // Use preview preset if hovering, otherwise use actual effects
@@ -276,24 +278,24 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="h-screen bg-black text-white flex flex-col">
       {/* Compact Controls Panel */}
-      <div className={`border-b border-zinc-800 bg-black ${isFullscreen ? 'hidden' : ''}`}>
-        <div className="max-w-7xl mx-auto px-4 py-2.5">
-          <div className="flex items-center gap-3 flex-wrap">
+      <div className={`border-b border-zinc-800 bg-black shrink-0 ${isFullscreen ? 'hidden' : ''}`}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             {/* Title */}
-            <h1 className="text-base font-light mr-2 text-zinc-400">Typeface Playground</h1>
+            <h1 className="text-sm sm:text-base font-light mr-1 sm:mr-2 text-zinc-400">Typeface Playground</h1>
 
             {/* Font Selector */}
-            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <label htmlFor="font-select" className="text-xs text-zinc-500 whitespace-nowrap">
+            <div className="flex items-center gap-2 flex-1 min-w-[120px] sm:min-w-[200px]">
+              <label htmlFor="font-select" className="text-xs text-zinc-500 whitespace-nowrap hidden sm:inline">
                 Font
               </label>
               <select
                 id="font-select"
                 value={selectedFont || ''}
                 onChange={(e) => setSelectedFont(e.target.value)}
-                className="flex-1 px-2.5 py-1 text-xs bg-black border border-zinc-800 rounded focus:ring-1 focus:ring-zinc-600 focus:border-zinc-600 outline-none"
+                className="flex-1 px-2 sm:px-2.5 py-1.5 sm:py-1 text-xs bg-black border border-zinc-800 rounded focus:ring-1 focus:ring-zinc-600 focus:border-zinc-600 outline-none"
               >
                 {Object.entries(fontsByFamily).map(([family, familyFonts]) => (
                   <optgroup key={family} label={family}>
@@ -308,8 +310,8 @@ export default function Home() {
             </div>
 
             {/* Text Input */}
-            <div className="flex items-center gap-2 flex-1 min-w-[250px]">
-              <label htmlFor="text-input" className="text-xs text-zinc-500 whitespace-nowrap">
+            <div className="flex items-center gap-2 flex-1 min-w-[120px] sm:min-w-[250px]">
+              <label htmlFor="text-input" className="text-xs text-zinc-500 whitespace-nowrap hidden sm:inline">
                 Text
               </label>
               <textarea
@@ -318,16 +320,16 @@ export default function Home() {
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Enter text..."
                 rows={1}
-                className="flex-1 px-2.5 py-1 text-xs bg-black border border-zinc-800 rounded focus:ring-1 focus:ring-zinc-600 focus:border-zinc-600 outline-none resize-none"
+                className="flex-1 px-2 sm:px-2.5 py-1.5 sm:py-1 text-xs bg-black border border-zinc-800 rounded focus:ring-1 focus:ring-zinc-600 focus:border-zinc-600 outline-none resize-none"
                 style={{ minHeight: '26px' }}
               />
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 onClick={toggleWireframe}
-                className={`px-2.5 py-1 text-xs rounded transition-colors whitespace-nowrap ${
+                className={`px-2 sm:px-2.5 py-1.5 sm:py-1 text-xs rounded transition-colors whitespace-nowrap ${
                   wireframeMode
                     ? 'bg-white text-black hover:bg-zinc-200'
                     : 'border border-zinc-800 hover:border-zinc-600'
@@ -338,14 +340,14 @@ export default function Home() {
               </button>
               <button
                 onClick={downloadSVG}
-                className="px-2.5 py-1 text-xs border border-zinc-800 hover:border-zinc-600 rounded transition-colors whitespace-nowrap"
+                className="px-2 sm:px-2.5 py-1.5 sm:py-1 text-xs border border-zinc-800 hover:border-zinc-600 rounded transition-colors whitespace-nowrap"
                 title="Download as SVG"
               >
                 Save
               </button>
               <button
                 onClick={toggleFullscreen}
-                className="px-2.5 py-1 text-xs border border-zinc-800 hover:border-zinc-600 rounded transition-colors whitespace-nowrap"
+                className="px-2 sm:px-2.5 py-1.5 sm:py-1 text-xs border border-zinc-800 hover:border-zinc-600 rounded transition-colors whitespace-nowrap hidden md:inline-block"
               >
                 Full
               </button>
@@ -366,36 +368,81 @@ export default function Home() {
         </div>
       )}
 
-      {/* Main Content Area with Sidebar */}
-      <div className={`flex ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-48px)]'}`}>
-        {/* Render Area */}
-        <div className="flex-1">
-          <FontRenderer 
-            ref={fontRendererRef} 
-            fontPath={selectedFont} 
+      {/* Main Content Area */}
+      <div className={`flex-1 min-h-0 flex ${isFullscreen ? '' : 'flex-col md:flex-row'}`}>
+        {/* Render Area - on mobile: top portion; on desktop: left side */}
+        <div className={`${isFullscreen ? 'w-full h-full' : 'flex-1 min-h-0 md:h-full'}`}>
+          <FontRenderer
+            ref={fontRendererRef}
+            fontPath={selectedFont}
             text={text}
             wireframeMode={wireframeMode}
             effects={displayEffects}
           />
         </div>
 
-        {/* Effects Sidebar (hidden in fullscreen) */}
+        {/* Effects Sidebar */}
         {!isFullscreen && (
-          <EffectsSidebar
-            effects={effects}
-            animations={animations}
-            presets={presets}
-            onAddEffect={addEffect}
-            onUpdateEffect={updateEffect}
-            onToggleEffect={toggleEffect}
-            onDeleteEffect={deleteEffect}
-            onMoveEffect={moveEffect}
-            onUpdateAnimation={updateAnimation}
-            onSavePreset={savePreset}
-            onLoadPreset={loadPreset}
-            onDeletePreset={deletePreset}
-            onPreviewPreset={handlePreviewPreset}
-          />
+          <>
+            {/* Mobile: collapsible bottom panel with toggle */}
+            <div className="md:hidden flex flex-col shrink-0 border-t border-zinc-800">
+              {/* Toggle bar */}
+              <button
+                onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+                className="flex items-center justify-between px-4 py-2 bg-zinc-900/80 border-b border-zinc-800"
+              >
+                <span className="text-xs font-medium text-zinc-300">
+                  Effects {effects.length > 0 && `(${effects.length})`}
+                </span>
+                {showMobileSidebar ? (
+                  <BsChevronDown size={12} className="text-zinc-400" />
+                ) : (
+                  <BsChevronUp size={12} className="text-zinc-400" />
+                )}
+              </button>
+
+              {/* Scrollable sidebar content */}
+              {showMobileSidebar && (
+                <div className="overflow-y-auto max-h-[45vh]">
+                  <EffectsSidebar
+                    effects={effects}
+                    animations={animations}
+                    presets={presets}
+                    onAddEffect={addEffect}
+                    onUpdateEffect={updateEffect}
+                    onToggleEffect={toggleEffect}
+                    onDeleteEffect={deleteEffect}
+                    onMoveEffect={moveEffect}
+                    onUpdateAnimation={updateAnimation}
+                    onSavePreset={savePreset}
+                    onLoadPreset={loadPreset}
+                    onDeletePreset={deletePreset}
+                    onPreviewPreset={handlePreviewPreset}
+                    isMobile
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: right sidebar */}
+            <div className="hidden md:block h-full">
+              <EffectsSidebar
+                effects={effects}
+                animations={animations}
+                presets={presets}
+                onAddEffect={addEffect}
+                onUpdateEffect={updateEffect}
+                onToggleEffect={toggleEffect}
+                onDeleteEffect={deleteEffect}
+                onMoveEffect={moveEffect}
+                onUpdateAnimation={updateAnimation}
+                onSavePreset={savePreset}
+                onLoadPreset={loadPreset}
+                onDeletePreset={deletePreset}
+                onPreviewPreset={handlePreviewPreset}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>
