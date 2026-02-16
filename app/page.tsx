@@ -386,10 +386,11 @@ export default function Home() {
           <>
             {/* Mobile: collapsible bottom panel with toggle */}
             <div className="md:hidden flex flex-col shrink-0 border-t border-zinc-800">
-              {/* Toggle bar */}
+              {/* Toggle bar - add safe-area bottom padding when panel is collapsed */}
               <button
                 onClick={() => setShowMobileSidebar(!showMobileSidebar)}
                 className="flex items-center justify-between px-4 py-2 bg-zinc-900/80 border-b border-zinc-800"
+                style={!showMobileSidebar ? { paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' } : undefined}
               >
                 <span className="text-xs font-medium text-zinc-300">
                   Effects {effects.length > 0 && `(${effects.length})`}
@@ -401,9 +402,12 @@ export default function Home() {
                 )}
               </button>
 
-              {/* Scrollable sidebar content */}
+              {/* Scrollable sidebar content - safe-area bottom padding when expanded */}
               {showMobileSidebar && (
-                <div className="overflow-y-auto max-h-[45vh]">
+                <div
+                  className="overflow-y-auto max-h-[45vh]"
+                  style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+                >
                   <EffectsSidebar
                     effects={effects}
                     animations={animations}
