@@ -8,6 +8,7 @@ declare module 'opentype.js' {
     leftSideBearing: number;
     path: Path;
     getBoundingBox(): BoundingBox;
+    getPath(x: number, y: number, fontSize: number, options?: any): Path;
   }
 
   export interface Path {
