@@ -2,22 +2,22 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import FontRenderer from './components/FontRenderer';
+import type { FontRendererHandle } from './components/FontRenderer';
 import EffectsSidebar from './components/EffectsSidebar';
+import GifExportDialog from './components/GifExportDialog';
+import type { GifExportSettings } from './components/GifExportDialog';
 import type { Effect, EffectType } from './types/effects';
 import { createEffect } from './types/effects';
 import type { EffectAnimations, AnimationConfig } from './types/animation';
 import { useAnimationEngine } from './hooks/useAnimationEngine';
 import type { Preset } from './types/presets';
 import { BsChevronDown, BsChevronUp } from 'react-icons/bs';
+import { exportGif, getDefaultDuration } from './utils/gifExporter';
 
 interface FontFile {
   name: string;
   path: string;
   family: string;
-}
-
-export interface FontRendererHandle {
-  getSVGContent: () => string | null;
 }
 
 export default function Home() {
@@ -32,6 +32,9 @@ export default function Home() {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [previewPreset, setPreviewPreset] = useState<Preset | null>(null);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [showGifDialog, setShowGifDialog] = useState(false);
+  const [gifExporting, setGifExporting] = useState(false);
+  const [gifProgress, setGifProgress] = useState(0);
   const fontRendererRef = useRef<FontRendererHandle>(null);
 
   // Use preview preset if hovering, otherwise use actual effects
@@ -266,6 +269,48 @@ export default function Home() {
     setPreviewPreset(preset);
   };
 
+  // GIF export handler
+  const handleGifExport = async (settings: GifExportSettings) => {
+    const font = fontRendererRef.current?.getFont();
+    if (!font) {
+      alert('Font not loaded yet');
+      return;
+    }
+
+    setGifExporting(true);
+    setGifProgress(0);
+
+    try {
+      const blob = await exportGif(
+        font,
+        text,
+        wireframeMode,
+        effects,
+        animations,
+        settings,
+        setGifProgress,
+      );
+
+      // Trigger download
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `typeface-playground-${Date.now()}.gif`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setShowGifDialog(false);
+    } catch (err) {
+      console.error('GIF export failed:', err);
+      alert(`GIF export failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setGifExporting(false);
+      setGifProgress(0);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-dvh bg-black flex items-center justify-center">
@@ -344,6 +389,13 @@ export default function Home() {
                 title="Download as SVG"
               >
                 Save
+              </button>
+              <button
+                onClick={() => setShowGifDialog(true)}
+                className="px-2.5 py-1 text-xs border border-zinc-800 hover:border-zinc-600 rounded transition-colors whitespace-nowrap"
+                title="Export animation as GIF"
+              >
+                GIF
               </button>
               <button
                 onClick={toggleFullscreen}
@@ -449,6 +501,21 @@ export default function Home() {
           </>
         )}
       </div>
+
+      {/* GIF Export Dialog */}
+      {showGifDialog && (
+        <GifExportDialog
+          defaultDuration={getDefaultDuration(animations)}
+          isExporting={gifExporting}
+          progress={gifProgress}
+          onExport={handleGifExport}
+          onCancel={() => {
+            if (!gifExporting) {
+              setShowGifDialog(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

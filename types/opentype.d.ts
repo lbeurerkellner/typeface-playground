@@ -9,6 +9,7 @@ declare module 'opentype.js' {
     path: Path;
     getPath(x?: number, y?: number, fontSize?: number, options?: any, font?: Font): Path;
     getBoundingBox(): BoundingBox;
+    getPath(x: number, y: number, fontSize: number, options?: any): Path;
   }
 
   export interface Path {
