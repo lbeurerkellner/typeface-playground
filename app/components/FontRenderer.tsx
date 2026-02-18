@@ -401,8 +401,7 @@ const FontRenderer = forwardRef<FontRendererHandle, FontRendererProps>(
           <svg
             ref={svgRef}
             className="text-white"
-            style={{ 
-              filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))',
+            style={{
               maxWidth: '90vw',
               maxHeight: '90vh',
             }}
